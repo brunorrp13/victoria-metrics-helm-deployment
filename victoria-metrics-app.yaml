@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: victoria-metrics-app
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: 'https://github.com/brunorrp13/victoria-metrics-helm-deployment'
+    targetRevision: HEAD
+    path: helm-chart
+
+    helm:
+      releaseName: victoria-metrics 
+      valueFiles:
+        - values.yaml  
+
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: victoria-metrics
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true  
+      - RespectIgnoreDifferences=true 
+
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      name: vm-monitoring-validation
+      namespace: victoria-metrics
+      jsonPointers:
+        - /data
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      name: vm-monitoring-admission
+      jqPathExpressions:
+        - '.webhooks[]?.clientConfig.caBundle'
